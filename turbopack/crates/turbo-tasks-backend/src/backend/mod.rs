@@ -1774,7 +1774,11 @@ impl<B: BackingStorage> TurboTasksBackendInner<B> {
         // at the start of every step.
 
         #[cfg(not(feature = "trace_task_details"))]
-        let _span = tracing::trace_span!("task execution completed").entered();
+        let span = tracing::trace_span!(
+            "task execution completed",
+            new_children = tracing::field::Empty
+        )
+        .entered();
         #[cfg(feature = "trace_task_details")]
         let span = tracing::trace_span!(
             "task execution completed",
@@ -1783,6 +1787,7 @@ impl<B: BackingStorage> TurboTasksBackendInner<B> {
                 Ok(value) => display(either::Either::Left(value)),
                 Err(err) => display(either::Either::Right(err)),
             },
+            new_children = tracing::field::Empty,
             immutable = tracing::field::Empty,
             new_output = tracing::field::Empty,
             output_dependents = tracing::field::Empty,
@@ -1834,6 +1839,7 @@ impl<B: BackingStorage> TurboTasksBackendInner<B> {
         }
 
         let has_new_children = !new_children.is_empty();
+        span.record("new_children", new_children.len());
 
         if has_new_children {
             self.task_execution_completed_unfinished_children_dirty(&mut ctx, &new_children)
